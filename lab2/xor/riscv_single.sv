@@ -113,7 +113,17 @@ module controller (input  logic [6:0] op,
    maindec md (op, ResultSrc, MemWrite, Branch,
 	       ALUSrcA, ALUSrcB, RegWrite, Jump, ImmSrc, ALUOp);
    aludec ad (op[5], funct3, funct7b5, ALUOp, ALUControl);
-   assign PCSrc = Branch & (Zero ^ funct3[0]) | Jump;
+logic BranchControl;
+case(funct3)
+/*000: BranchControl = (Zero) // beq
+001: BranchControl =~(Zero) // bne
+100: BranchControl = (N ^ V)  //
+110: BranchControl = ~(N ^ V)
+	// figure out where "V=  " should go
+	// figure out where "N= " should go */
+endcase
+
+assign PCSrc = Branch & BranchControl | Jump;
    
 endmodule // controller
 
