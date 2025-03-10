@@ -230,7 +230,7 @@ module extend (input  logic [31:7] instr,
        // J−type (jal)
        3'b011:  immext = {{12{instr[31]}}, instr[19:12], instr[20], instr[30:21], 1'b0};
 	// U-type
-	     3'b100: immext = {{12{instr[31]}}, instr[31:12]}};
+	     3'b100: immext = {upimm, 12b'0};
        default: immext = 32'bx; // undefined
      endcase // case (immsrc)
    
