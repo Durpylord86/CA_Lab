@@ -370,6 +370,11 @@ module alu (input  logic [31:0] a, b,
        4'b0111:  result = a >> b[4:0];           // srl
        4'b1000:  result = a << b[4:0];           // sll
        4'b1001:  result = {31'b0,(a < b)};       // sltu
+       4'b1010:  if ($signed(a) >= $signed(b)) result = BTA; // bge
+       4'b1011:  if (a >= b) result = BTA;               // bgeu
+       4'b1100:  if ($signed(a) < $signed(b)) result = BTA;  // blt
+       4'b1101:  if (a < b) result = BTA;               // bltu
+       4'b1110:  result = $signed({{24{mem_data[7]}}, mem_data[7:0]}); // lb
        default: result = 32'bx;
      endcase
 
