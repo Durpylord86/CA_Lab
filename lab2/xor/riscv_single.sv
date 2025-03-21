@@ -376,10 +376,10 @@ module alu (input  logic [31:0] a, b,
        4'b1101:  result = (a < b) ? PC : BTA;    // bltu
        4'b1110:  result = SignExt(Address[7:0]); // lb
        4'b1111:  result = ZeroExt(Address[7:0]); // lbu
-       5'b10000: result = SignExt(Address[15:0]); // lh
-       5'b10001: result = ZeroExt(Address[15:0]); // lhu
-       5'b10010: Address[7:0] = b[7:0];          // sb
-       5'b10011: Address[15:0] = b[15:0];        // sh
+       4'b0001:  result = SignExt(Address[15:0]); // lh
+       4'b0010:  result = ZeroExt(Address[15:0]); // lhu
+       4'b0011:  Address[7:0] = b[7:0];          // sb
+       4'b0100:  Address[15:0] = b[15:0];        // sh
      /*  4'b1010:  if ($signed(a) >= $signed(b)) result = BTA; // bge
        4'b1011:  if (a >= b) result = BTA;               // bgeu
        4'b1100:  if ($signed(a) < $signed(b)) result = BTA;  // blt
