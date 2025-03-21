@@ -376,6 +376,7 @@ module alu (input  logic [31:0] a, b,
        4'b1011:  result = (a >= b) ? PC : BTA;   // bgeu
        4'b1100:  result = (a < b) ? PC : BTA;    // blt
        4'b1101:  result = (a < b) ? PC : BTA;    // bltu
+	// For below can i straight out write Address in instruction? or will I have to find the address and directly implement it?
        4'b1110:  result = SignExt(Address[7:0]); // lb
        4'b1111:  result = ZeroExt(Address[7:0]); // lbu
        4'b0001:  result = SignExt(Address[15:0]); // lh
