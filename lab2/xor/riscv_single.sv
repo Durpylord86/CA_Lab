@@ -346,7 +346,9 @@ endmodule // dmem
 
 module alu (input  logic [31:0] a, b,
             input  logic [3:0] 	alucontrol,
-            output logic [31:0] result,
+	    // input logic [31:0] Address, in case address is technically both an input or an output
+	    output logic [31:0] result,
+	    output logic [31:0] Address,
             output logic 	zero);
 
    logic [31:0] 	       condinvb, sum;
