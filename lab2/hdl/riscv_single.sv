@@ -35,7 +35,7 @@ module testbench();
    logic        MemWrite;
 
    // instantiate device to be tested
-   top dut(clk, reset, WriteData, DataAdr, MemWrite);
+   //top dut(clk, reset, WriteData, DataAdr, MemWrite);
 
    initial
      begin
@@ -269,7 +269,7 @@ module mux3 #(parameter WIDTH = 8)
    
 endmodule // mux3
 
-module top (input  logic        clk, reset,
+/*module top (input  logic        clk, reset,
 	    output logic [31:0] WriteData, DataAdr,
 	    output logic 	MemWrite);
    
@@ -281,7 +281,7 @@ module top (input  logic        clk, reset,
    imem imem (PC, Instr);
    dmem dmem (clk, MemWrite, DataAdr, WriteData, ReadData);
    
-endmodule // top
+endmodule // top*/
 
 module imem (input  logic [31:0] a,
 	     output logic [31:0] rd);
