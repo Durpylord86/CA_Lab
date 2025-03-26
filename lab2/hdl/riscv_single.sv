@@ -25,6 +25,54 @@
 //   sw           0100011   010       immediate
 //   jal          1101111   immediate immediate
 
+module testbench();
+
+   logic        clk;
+   logic        reset;
+
+   logic [31:0] WriteData;
+   logic [31:0] DataAdr;
+   logic        MemWrite;       // RegWrite_ImmSrc_ALUSrc_MemWrite_ResultSrc_Branch_ALUOp_Jump
+
+
+   // instantiate device to be tested
+   top dut(clk, reset, WriteData, DataAdr, MemWrite);
+
+   initial
+     begin
+	string memfilename;
+        memfilename = {"../testing/sltiu.memfile"};
+        $readmemh(memfilename, dut.imem.RAM);
+     end
+
+   
+   // initialize test
+   initial
+     begin
+	reset <= 1; # 22; reset <= 0;
+     end
+
+   // generate clock to sequence tests
+   always
+     begin
+	clk <= 1; # 5; clk <= 0; # 5;
+     end
+
+   // check results
+   always @(negedge clk)
+     begin
+	if(MemWrite) begin
+           if(DataAdr === 100 & WriteData === 25) begin
+              $display("Simulation succeeded");
+              $stop;
+           end else if (DataAdr !== 96) begin
+              $display("Simulation failed");
+              $stop;
+           end
+	end
+     end
+endmodule // testbench
+
 module riscvsingle (input  logic        clk, reset,
 		    output logic [31:0] PC,
 		    input logic [31:0] 	Instr,
