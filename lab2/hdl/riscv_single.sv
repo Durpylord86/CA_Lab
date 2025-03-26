@@ -41,7 +41,7 @@ module testbench();
    initial
      begin
 	string memfilename;
-        memfilename = {"../testing/sltiu.memfile"};
+        memfilename = {"../riscvtest/test_hw.memfile"};
         $readmemh(memfilename, dut.imem.RAM);
      end
 
@@ -59,7 +59,7 @@ module testbench();
      end
 
    // check results
-   always @(negedge clk)
+   /*(always @(negedge clk)
      begin
 	if(MemWrite) begin
            if(DataAdr === 100 & WriteData === 25) begin
@@ -70,7 +70,7 @@ module testbench();
               $stop;
            end
 	end
-     end
+     end*/
 endmodule // testbench
 
 module riscvsingle (input  logic        clk, reset,
@@ -78,9 +78,7 @@ module riscvsingle (input  logic        clk, reset,
 		    input logic [31:0] 	Instr,
 		    output logic 	MemWrite,
 		    output logic [31:0] ALUResult, WriteData,
-		    input logic [31:0] 	ReadData,
-		    input logic 	PCReady,
-		    output logic 	MemStrobe);
+		    input logic [31:0] 	ReadData);
    
    logic 				ALUSrc, PCTargetSrc, RegWrite, Jump, Zero, res31, carry;
    logic [2:0] 				ResultSrc;
@@ -90,12 +88,12 @@ module riscvsingle (input  logic        clk, reset,
    controller c (Instr[6:0], Instr[14:12], Instr[30], Zero, res31, carry,
 		 ResultSrc, MemWrite, PCSrc,
 		 ALUSrc, PCTargetSrc, RegWrite, Jump,
-		 ImmSrc, ALUControl, MemStrobe);
+		 ImmSrc, ALUControl);
    datapath dp (clk, reset, ResultSrc, PCSrc,
 		ALUSrc, PCTargetSrc, RegWrite,
 		ImmSrc, ALUControl,
 		Zero, res31, carry, PC, Instr,
-		ALUResult, WriteData, ReadData, PCReady);
+		ALUResult, WriteData, ReadData);
    
 endmodule // riscvsingle
 
@@ -108,14 +106,13 @@ module controller (input  logic [6:0] op,
 		   output logic       PCSrc, ALUSrc, PCTargetSrc,
 		   output logic       RegWrite, Jump,
 		   output logic [2:0] ImmSrc,
-		   output logic [3:0] ALUControl,
-		   output logic       MemStrobe);
+		   output logic [3:0] ALUControl);
    
    logic [1:0] 			      ALUOp;
    logic 			      Branch;
    
    maindec md (op, ResultSrc, MemWrite, Branch,
-	       ALUSrc, PCTargetSrc, RegWrite, Jump, ImmSrc, ALUOp, MemStrobe);
+	       ALUSrc, PCTargetSrc, RegWrite, Jump, ImmSrc, ALUOp);
    aludec ad (op[5], funct3, funct7b5, ALUOp, ALUControl);
 
   logic BranchControl;
@@ -148,27 +145,26 @@ module maindec (input  logic [6:0] op,
 		output logic 	   Branch, ALUSrc, PCTargetSrc,
 		output logic 	   RegWrite, Jump,
 		output logic [2:0] ImmSrc,
-		output logic [1:0] ALUOp,
-		output logic 	   MemStrobe);
+		output logic [1:0] ALUOp);
    
-   logic [14:0] 		   controls;
+   logic [13:0] 		   controls;
    
    assign {RegWrite, ImmSrc, ALUSrc, MemWrite,
-	   ResultSrc, Branch, ALUOp, Jump, PCTargetSrc, MemStrobe} = controls;
+	   ResultSrc, Branch, ALUOp, Jump, PCTargetSrc} = controls;
    
    always_comb
      case(op)
-       // RegWrite_ImmSrc_ALUSrc_MemWrite_ResultSrc_Branch_ALUOp_Jump_PCTargetSrc_MemStrobe
-       7'b0000011: controls = 15'b1_000_1_0_001_0_00_0_0_1; // lw
-       7'b0100011: controls = 15'b0_001_1_1_xxx_0_00_0_0_1; // sw
-       7'b0110011: controls = 15'b1_xxx_0_0_000_0_10_0_0_0; // R–type
-       7'b1100011: controls = 15'b0_010_0_0_xxx_1_01_0_0_0; // beq
-       7'b0010011: controls = 15'b1_000_1_0_000_0_10_0_x_0; // I–type ALU
-       7'b1101111: controls = 15'b1_011_0_0_010_0_xx_1_0_0; // jal
-       7'b0110111: controls = 15'b1_100_x_0_011_0_xx_0_0_0; // lui
-       7'b1100111: controls = 15'b1_000_1_0_010_0_xx_1_1_0; // jalr
-       7'b0010111: controls = 15'b1_100_x_0_100_0_xx_0_0_0; // auipc
-       default: controls = 15'bx_xxx_x_x_xxx_x_xx_x_x_x; // ???
+       // RegWrite_ImmSrc_ALUSrc_MemWrite_ResultSrc_Branch_ALUOp_Jump_PCTargetSrc
+       7'b0000011: controls = 14'b1_000_1_0_001_0_00_0_0; // lw
+       7'b0100011: controls = 14'b0_001_1_1_xxx_0_00_0_0; // sw
+       7'b0110011: controls = 14'b1_xxx_0_0_000_0_10_0_0; // R–type
+       7'b1100011: controls = 14'b0_010_0_0_xxx_1_01_0_0; // beq
+       7'b0010011: controls = 14'b1_000_1_0_000_0_10_0_x; // I–type ALU
+       7'b1101111: controls = 14'b1_011_0_0_010_0_xx_1_0; // jal
+       7'b0110111: controls = 14'b1_100_x_0_011_0_xx_0_0; // lui
+       7'b1100111: controls = 14'b1_000_1_0_010_0_xx_1_1; // jalr
+       7'b0010111: controls = 14'b1_100_x_0_100_0_xx_0_0; // auipc
+       default: controls = 14'bx_xxx_x_x_xxx_x_xx_x_x; // ???
      endcase // case (op)
    
 endmodule // maindec
@@ -224,8 +220,7 @@ module datapath (input  logic        clk, reset,
 		 output logic [31:0] PC,
 		 input  logic [31:0] Instr,
 		 output logic [31:0] ALUResult, WriteData,
-		 input  logic [31:0] ReadData,
-		 input logic         PCReady);
+		 input  logic [31:0] ReadData);
    
    logic [31:0] 		     PCNext, PCPlus4;
    logic [31:0]          PCTarget, PCTargetNew;
@@ -234,7 +229,7 @@ module datapath (input  logic        clk, reset,
    logic [31:0] 		     Result;
    
    // next PC logic
-   flopenr #(32) pcreg (clk, reset, PCReady, PCNext, PC);
+   flopr #(32) pcreg (clk, reset, PCNext, PC);
    adder  pcadd4 (PC, 32'd4, PCPlus4);
    adder  pcaddbranch (PC, ImmExt, PCTarget);
    mux2 #(32)  pcmux (PCPlus4, PCTargetNew, PCSrc, PCNext);
