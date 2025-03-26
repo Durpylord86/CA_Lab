@@ -43,6 +43,7 @@ module testbench();
 	string memfilename;
         memfilename = {"../riscvtest/test_hw.memfile"};
         $readmemh(memfilename, dut.imem.RAM);
+	$readmemh(memfilename, dut.dmem.RAM);
      end
 
    
