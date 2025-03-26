@@ -336,6 +336,41 @@ module mux5 #(parameter WIDTH = 12)
 
 endmodule // mux5
 
+module top (input  logic        clk, reset,
+	    output logic [31:0] WriteData, DataAdr,
+	    output logic 	MemWrite);
+   
+   logic [31:0] 		PC, Instr, ReadData;
+   
+   // instantiate processor and memories
+   riscvsingle rv32single (clk, reset, PC, Instr, MemWrite, DataAdr,
+			   WriteData, ReadData);
+   imem imem (PC, Instr);
+   dmem dmem (clk, MemWrite, DataAdr, WriteData, ReadData);
+   
+endmodule // top
+
+module imem (input  logic [31:0] a,
+	     output logic [31:0] rd);
+   
+	logic [31:0] 		 RAM[2047:0];
+   
+   assign rd = RAM[a[31:2]]; // word aligned
+   
+endmodule // imem
+
+module dmem (input  logic        clk, we,
+	     input  logic [31:0] a, wd,
+	     output logic [31:0] rd);
+   
+   logic [31:0] 		 RAM[255:0];
+   
+   assign rd = RAM[a[31:2]]; // word aligned
+   always_ff @(posedge clk)
+     if (we) RAM[a[31:2]] <= wd;
+   
+endmodule // dmem
+
 module alu (input  logic [31:0] a, b,
             input  logic [3:0] 	alucontrol,
             output logic [31:0] result,
