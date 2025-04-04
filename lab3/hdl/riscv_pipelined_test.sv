@@ -148,6 +148,8 @@ module riscv(input  logic        clk, reset,
    logic [2:0] 			 funct3D;
    logic 			 funct7b5D;
    logic [2:0] 			 ImmSrcD;
+   logic       CarryE;
+   logic       Res31E;
    logic 			 ZeroE;
    logic 			 PCSrcE;
    logic [3:0] 			 ALUControlE;
@@ -165,14 +167,14 @@ module riscv(input  logic        clk, reset,
    
    controller c(clk, reset,
 		opD, funct3D, funct7b5D, ImmSrcD,
-		FlushE, ZeroE, PCSrcE, ALUControlE, ALUSrcAE, ALUSrcBE, ResultSrcEb0,
+		FlushE, CarryE, Res31E, ZeroE, PCSrcE, ALUControlE, ALUSrcAE, ALUSrcBE, ResultSrcEb0,
 		MemWriteM, RegWriteM, 
 		RegWriteW, ResultSrcW);
 
    datapath dp(clk, reset,
                StallF, PCF, InstrF,
 	       opD, funct3D, funct7b5D, StallD, FlushD, ImmSrcD,
-	       FlushE, ForwardAE, ForwardBE, PCSrcE, ALUControlE, ALUSrcAE, ALUSrcBE, ZeroE,
+	       FlushE, ForwardAE, ForwardBE, PCSrcE, ALUControlE, ALUSrcAE, ALUSrcBE, CarryE, Res31E, ZeroE,
                MemWriteM, WriteDataM, ALUResultM, ReadDataM,
                RegWriteW, ResultSrcW,
                Rs1D, Rs2D, Rs1E, Rs2E, RdE, RdM, RdW);
@@ -191,6 +193,8 @@ module controller(input  logic		 clk, reset,
                   output logic [2:0] ImmSrcD,
                   // Execute stage control signals
                   input logic 	     FlushE, 
+                  input logic        CarryE,
+                  input logic        Res31E,
                   input logic 	     ZeroE, 
                   output logic 	     PCSrcE, // for datapath and Hazard Unit
                   output logic [3:0] ALUControlE,
@@ -226,7 +230,15 @@ module controller(input  logic		 clk, reset,
                             {RegWriteD, ResultSrcD, MemWriteD, JumpD, BranchD, ALUControlD, ALUSrcAD, ALUSrcBD, funct3D},
                             {RegWriteE, ResultSrcE, MemWriteE, JumpE, BranchE, ALUControlE, ALUSrcAE, ALUSrcBE, funct3E});
 
-   assign PCSrcE = (BranchE & (ZeroE ^ funct3E[0])) | JumpE;
+   logic            BranchControl;
+
+   assign BranchControl = (ZeroE & ~funct3D[0]&~funct3D[1]&~funct3D[2]) |
+			                    (~ZeroE & funct3D[0]&funct3D[1]&funct3D[2]) |
+			                    (Res31E & ~funct3D[0]&~funct3D[1]&funct3D[2]) |
+			                    ((~Res31E | ZeroE) & funct3D[0]&~funct3D[1]&funct3D[2]) |
+			                    (~CarryE & ~funct3D[0]&funct3D[1]&funct3D[2]) |
+			                    (CarryE & funct3D[0]&funct3D[1]&funct3D[2]);
+   assign PCSrcE = (BranchE & BranchControl) | JumpE;
    assign ResultSrcEb0 = ResultSrcE[0];
    
    // Memory stage pipeline control register
@@ -259,7 +271,7 @@ module maindec(input  logic [6:0] op,
        7'b0000011: controls = 13'b1_000_0_1_0_01_0_00_0; // lw
        7'b0100011: controls = 13'b0_001_0_1_1_00_0_00_0; // sw
        7'b0110011: controls = 13'b1_xxx_0_0_0_00_0_10_0; // R-type 
-       7'b1100011: controls = 13'b0_010_0_0_0_00_1_01_0; // beq
+       7'b1100011: controls = 13'b0_010_0_0_0_00_1_01_0; // B-Type
        7'b0010011: controls = 13'b1_000_0_1_0_00_0_10_0; // I-type ALU
        7'b1101111: controls = 13'b1_011_0_0_0_10_0_00_1; // jal
        7'b0110111: controls = 13'b1_100_1_1_0_00_0_00_0; // lui       
@@ -319,6 +331,8 @@ module datapath(input logic clk, reset,
                 input logic [3:0]   ALUControlE,
 		input logic 	    ALUSrcAE,
                 input logic 	    ALUSrcBE,
+                output logic      CarryE,
+                output logic      Res31E,
                 output logic 	    ZeroE,
                 // Memory stage signals
                 input logic 	    MemWriteM, 
@@ -384,7 +398,7 @@ module datapath(input logic clk, reset,
    mux3   #(32)  fbemux(RD2E, ResultW, ALUResultM, ForwardBE, WriteDataE);
    mux2   #(32)  srcamux(SrcAEforward, 32'h0, ALUSrcAE, SrcAE);   
    mux2   #(32)  srcbmux(WriteDataE, ImmExtE, ALUSrcBE, SrcBE);
-   alu           alu(SrcAE, SrcBE, ALUControlE, ALUResultE, ZeroE);
+   alu           alu(SrcAE, SrcBE, ALUControlE, ALUResultE, CarryE, Res31E, ZeroE);
    adder         branchadd(ImmExtE, PCE, PCTargetE);
 
    // Memory stage pipeline register
@@ -562,6 +576,8 @@ endmodule // dmem
 module alu(input  logic [31:0] a, b,
            input logic [3:0]   alucontrol,
            output logic [31:0] result,
+           output logic        carry,
+           output logic        res31,
            output logic        zero);
 
    logic [31:0] 	       condinvb, sum;
@@ -588,6 +604,8 @@ module alu(input  logic [31:0] a, b,
        default: result = 32'bx;
      endcase
 
+   assign carry = ~(a < b);
+   assign res31 = result[31];
    assign zero = (result == 32'b0);
    assign v = ~(alucontrol[0] ^ a[31] ^ b[31]) & (a[31] ^ sum[31]) & isAddSub;
    
