@@ -225,6 +225,18 @@ module controller(input  logic		 clk, reset,
    floprc #(15) controlregE(clk, reset, FlushE,
                             {RegWriteD, ResultSrcD, MemWriteD, JumpD, BranchD, ALUControlD, ALUSrcAD, ALUSrcBD, funct3D},
                             {RegWriteE, ResultSrcE, MemWriteE, JumpE, BranchE, ALUControlE, ALUSrcAE, ALUSrcBE, funct3E});
+/*always_comb
+    case(funct3)
+      3'b000: assign BranchControl = Zero; // beq
+      3'b001: assign BranchControl = ~Zero; // bne
+      3'b100: assign BranchControl = res31; //blt
+      3'b101: assign BranchControl = (~res31 | Zero); // bge
+      3'b110: assign BranchControl = ~carry; // bltu
+      3'b111: assign BranchControl = carry; // bgeu
+      default: assign BranchControl = 1'b0;
+    endcase // case (funct3)*/ 
+
+	// Is this where we would add the branches?
 
    assign PCSrcE = (BranchE & (ZeroE ^ funct3E[0])) | JumpE;
    assign ResultSrcEb0 = ResultSrcE[0];
