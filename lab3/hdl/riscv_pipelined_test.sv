@@ -92,7 +92,7 @@ module testbench();
    initial
      begin
 	string memfilename;
-        memfilename = {"../testing/bltu.memfile"};
+        memfilename = {"../testing/auipc.memfile"};
 	$readmemh(memfilename, dut.imem.RAM);
      end
    
@@ -229,7 +229,7 @@ module controller(input  logic		 clk, reset,
    aludec  ad(opD[5], funct3D, funct7b5D, ALUOpD, ALUControlD);
    
    // Execute stage pipeline control register and logic
-   floprc #(15) controlregE(clk, reset, FlushE,
+   floprc #(16) controlregE(clk, reset, FlushE,
                             {RegWriteD, ResultSrcD, MemWriteD, JumpD, BranchD, ALUControlD, ALUSrcAD, ALUSrcBD, PCTargetSrcD, funct3D},
                             {RegWriteE, ResultSrcE, MemWriteE, JumpE, BranchE, ALUControlE, ALUSrcAE, ALUSrcBE, PCTargetSrcE, funct3E});
 
@@ -275,13 +275,13 @@ module maindec(input  logic [6:0] op,
        7'b0100011: controls = 14'b0_001_0_1_1_00_0_00_0_0; // sw
        7'b0110011: controls = 14'b1_xxx_0_0_0_00_0_10_0_0; // R-type 
        7'b1100011: controls = 14'b0_010_0_0_0_00_1_01_0_0; // B-Type
-       7'b0010011: controls = 14'b1_000_0_1_0_00_0_10_0_x; // I-type ALU
+       7'b0010011: controls = 14'b1_000_0_1_0_00_0_10_0_0; // I-type ALU
        7'b1101111: controls = 14'b1_011_0_0_0_10_0_00_1_0; // jal
        7'b0110111: controls = 14'b1_100_1_1_0_00_0_00_0_0; // lui       
-       7'b1100111: controls = 14'b1_000_1_0_0_010_0_xx_1_1; // jalr
-       //7/b0010111: controls = 14'b1_100_x_x_0_100_0_xx_0_0; // auipc
+       7'b1100111: controls = 14'b1_000_1_0_0_10_0_xx_1_1; // jalr
+       7'b0010111: controls = 14'b1_100_x_x_0_11_0_xx_0_0; // auipc
        7'b0000000: controls = 14'b0_000_0_0_0_00_0_00_0_0; // need valid values at reset
-       default:    controls = 14'bx_xx_x_x_x_xx_x_xx_x_x; // non-implemented instruction
+       default:    controls = 14'bx_xxx_x_x_x_xx_x_xx_x_x; // non-implemented instruction
      endcase
 endmodule
 
@@ -370,10 +370,12 @@ module datapath(input logic clk, reset,
    logic [31:0] 		    PCTargetE, PCTargetNewE;
    // Memory stage signals
    logic [31:0] 		    PCPlus4M;
+   logic [31:0]         PCTargetNewM;
    // Writeback stage signals
    logic [31:0] 		    ALUResultW;
    logic [31:0] 		    ReadDataW;
    logic [31:0] 		    PCPlus4W;
+   logic [31:0]         PCTargetNewW;
    logic [31:0] 		    ResultW;
 
    // Fetch stage pipeline register and logic
@@ -409,15 +411,15 @@ module datapath(input logic clk, reset,
    mux2   #(32)  jalrmux(PCTargetE, ALUResultE, PCTargetSrcE, PCTargetNewE);
 
    // Memory stage pipeline register
-   flopr  #(101) regM(clk, reset, 
-                      {ALUResultE, WriteDataE, RdE, PCPlus4E},
-                      {ALUResultM, WriteDataM, RdM, PCPlus4M});
+   flopr  #(133) regM(clk, reset, 
+                      {ALUResultE, WriteDataE, RdE, PCPlus4E, PCTargetNewE},
+                      {ALUResultM, WriteDataM, RdM, PCPlus4M, PCTargetNewM});
    
    // Writeback stage pipeline register and logic
-   flopr  #(101) regW(clk, reset, 
-                      {ALUResultM, ReadDataM, RdM, PCPlus4M},
-                      {ALUResultW, ReadDataW, RdW, PCPlus4W});
-   mux3   #(32)  resultmux(ALUResultW, ReadDataW, PCPlus4W, ResultSrcW, ResultW);	
+   flopr  #(133) regW(clk, reset, 
+                      {ALUResultM, ReadDataM, RdM, PCPlus4M, PCTargetNewM},
+                      {ALUResultW, ReadDataW, RdW, PCPlus4W, PCTargetNewW});
+   mux4   #(32)  resultmux(ALUResultW, ReadDataW, PCPlus4W, PCTargetNewW, ResultSrcW, ResultW);	
 endmodule
 
 // Hazard Unit: forward, stall, and flush
@@ -558,6 +560,15 @@ module mux3 #(parameter WIDTH = 8)
 
    assign y = s[1] ? d2 : (s[0] ? d1 : d0); 
 endmodule
+
+module mux4 #(parameter WIDTH = 8)
+   (input logic [WIDTH-1:0] d0, d1, d2, d3,
+    input logic [1:0] s,
+    output logic [WIDTH-1:0] y);
+
+ assign y = s[1] ? (s[0] ? d3 : d2) : (s[0] ? d1 : d0);
+
+endmodule // mux4
 
 module imem (input  logic [31:0] a,
 	     output logic [31:0] rd);
