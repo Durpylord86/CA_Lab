@@ -292,10 +292,20 @@ module aludec(input  logic       opb5,
               output logic [3:0] ALUControl);
 
    logic 			 RtypeSub;
-   assign RtypeSub = funct7b5 & opb5;  // TRUE for R-type subtract instruction
-
-   always_comb
+assign RtypeSub = funct7b5 & opb5;  // TRUE for R-type subtract instruction
+//Recently added
+always_comb
      case(ALUOp)
+      2'b00: case(funct3)
+        3'b010: ALUControl = 4'b0000; // addition
+        3'b001: ALUControl = 4'b1010; // lh, sh
+        3'b000: ALUControl = 4'b1011; // lb, sb
+        3'b100: ALUControl = 4'b1100; // lbu
+        3'b101: ALUControl = 4'b1101; // lhu 
+        default: ALUControl = 4'b0000;
+      endcase
+   //always_comb
+     //case(ALUOp)
        2'b00:                ALUControl = 4'b0000; // addition
        2'b01:                ALUControl = 4'b0001; // subtraction
        default: case(funct3) // R-type or I-type ALU
