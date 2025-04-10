@@ -92,8 +92,9 @@ module testbench();
    initial
      begin
 	string memfilename;
-        memfilename = {"../testing/auipc.memfile"};
+        memfilename = {"../testing/lbu.memfile"};
 	$readmemh(memfilename, dut.imem.RAM);
+  $readmemh(memfilename, dut.dmem.RAM);
      end
    
    // initialize test
@@ -292,20 +293,10 @@ module aludec(input  logic       opb5,
               output logic [3:0] ALUControl);
 
    logic 			 RtypeSub;
-assign RtypeSub = funct7b5 & opb5;  // TRUE for R-type subtract instruction
-//Recently added
-always_comb
+   assign RtypeSub = funct7b5 & opb5;  // TRUE for R-type subtract instruction
+
+   always_comb
      case(ALUOp)
-      2'b00: case(funct3)
-        3'b010: ALUControl = 4'b0000; // addition
-        3'b001: ALUControl = 4'b1010; // lh, sh
-        3'b000: ALUControl = 4'b1011; // lb, sb
-        3'b100: ALUControl = 4'b1100; // lbu
-        3'b101: ALUControl = 4'b1101; // lhu 
-        default: ALUControl = 4'b0000;
-      endcase
-   //always_comb
-     //case(ALUOp)
        2'b00:                ALUControl = 4'b0000; // addition
        2'b01:                ALUControl = 4'b0001; // subtraction
        default: case(funct3) // R-type or I-type ALU
@@ -378,15 +369,19 @@ module datapath(input logic clk, reset,
    logic [31:0] 		    WriteDataE;
    logic [31:0] 		    PCPlus4E;
    logic [31:0] 		    PCTargetE, PCTargetNewE;
+   logic [2:0] 		      funct3E;
    // Memory stage signals
    logic [31:0] 		    PCPlus4M;
    logic [31:0]         PCTargetNewM;
+   logic [2:0] 		      funct3M;
    // Writeback stage signals
    logic [31:0] 		    ALUResultW;
    logic [31:0] 		    ReadDataW;
    logic [31:0] 		    PCPlus4W;
    logic [31:0]         PCTargetNewW;
    logic [31:0] 		    ResultW;
+   logic [2:0]          funct3W;
+   logic [31:0] 		    loadResW;
 
    // Fetch stage pipeline register and logic
    mux2    #(32) pcmux(PCPlus4F, PCTargetNewE, PCSrcE, PCNextF);
@@ -408,9 +403,9 @@ module datapath(input logic clk, reset,
    extend         ext(InstrD[31:7], ImmSrcD, ImmExtD);
    
    // Execute stage pipeline register and logic
-   floprc #(175) regE(clk, reset, FlushE, 
-                      {RD1D, RD2D, PCD, Rs1D, Rs2D, RdD, ImmExtD, PCPlus4D}, 
-                      {RD1E, RD2E, PCE, Rs1E, Rs2E, RdE, ImmExtE, PCPlus4E});
+   floprc #(178) regE(clk, reset, FlushE, 
+                      {RD1D, RD2D, PCD, Rs1D, Rs2D, RdD, ImmExtD, PCPlus4D, funct3D}, 
+                      {RD1E, RD2E, PCE, Rs1E, Rs2E, RdE, ImmExtE, PCPlus4E, funct3E});
    
    mux3   #(32)  faemux(RD1E, ResultW, ALUResultM, ForwardAE, SrcAEforward);
    mux3   #(32)  fbemux(RD2E, ResultW, ALUResultM, ForwardBE, WriteDataE);
@@ -421,15 +416,16 @@ module datapath(input logic clk, reset,
    mux2   #(32)  jalrmux(PCTargetE, ALUResultE, PCTargetSrcE, PCTargetNewE);
 
    // Memory stage pipeline register
-   flopr  #(133) regM(clk, reset, 
-                      {ALUResultE, WriteDataE, RdE, PCPlus4E, PCTargetNewE},
-                      {ALUResultM, WriteDataM, RdM, PCPlus4M, PCTargetNewM});
+   flopr  #(136) regM(clk, reset, 
+                      {ALUResultE, WriteDataE, RdE, PCPlus4E, PCTargetNewE, funct3E},
+                      {ALUResultM, WriteDataM, RdM, PCPlus4M, PCTargetNewM, funct3M});
    
    // Writeback stage pipeline register and logic
-   flopr  #(133) regW(clk, reset, 
-                      {ALUResultM, ReadDataM, RdM, PCPlus4M, PCTargetNewM},
-                      {ALUResultW, ReadDataW, RdW, PCPlus4W, PCTargetNewW});
-   mux4   #(32)  resultmux(ALUResultW, ReadDataW, PCPlus4W, PCTargetNewW, ResultSrcW, ResultW);	
+   flopr  #(136) regW(clk, reset, 
+                      {ALUResultM, ReadDataM, RdM, PCPlus4M, PCTargetNewM, funct3M},
+                      {ALUResultW, ReadDataW, RdW, PCPlus4W, PCTargetNewW, funct3W});
+   loadext       load(ALUResultW, ReadDataW, funct3W, loadResW);
+   mux4   #(32)  resultmux(ALUResultW, loadResW, PCPlus4W, PCTargetNewW, ResultSrcW, ResultW);	
 endmodule
 
 // Hazard Unit: forward, stall, and flush
@@ -509,6 +505,46 @@ module extend(input  logic [31:7] instr,
      endcase             
 endmodule
 
+module loadext (input logic  [31:0] ALUResult, ReadData,
+                input logic  [2:0]  funct3,
+                output logic [31:0] loadResult);
+
+    logic [1:0]     loadbits;
+
+    assign loadbits = ALUResult[1:0];
+
+    always_comb
+      case(funct3)
+        3'b000: case(loadbits) // lb
+          2'b00: loadResult = {{24{ReadData[7]}}, ReadData[7:0]};
+          2'b01: loadResult = {{24{ReadData[15]}}, ReadData[15:8]};
+          2'b10: loadResult = {{24{ReadData[23]}}, ReadData[23:16]};
+          2'b11: loadResult = {{24{ReadData[31]}}, ReadData[31:24]};
+          default: loadResult = 32'bx;
+        endcase
+        3'b001: case(loadbits[1]) // lh
+          1'b0: loadResult = {{16{ReadData[15]}}, ReadData[15:0]};
+          1'b1: loadResult = {{16{ReadData[31]}}, ReadData[31:16]};
+          default: loadResult = 32'bx;
+        endcase
+        3'b010: loadResult = ReadData; // lw
+        3'b100: case(loadbits) // lbu
+          2'b00: loadResult = {{24'b0}, ReadData[7:0]};
+          2'b01: loadResult = {{24'b0}, ReadData[15:8]};
+          2'b10: loadResult = {{24'b0}, ReadData[23:16]};
+          2'b11: loadResult = {{24'b0}, ReadData[31:24]};
+          default: loadResult = 32'bx;
+        endcase
+        3'b101: case(loadbits[1]) // lhu
+          1'b0: loadResult = {{16'b0}, ReadData[15:0]};
+          1'b1: loadResult = {{16'b0}, ReadData[31:16]};
+          default: loadResult = 32'bx;
+        endcase
+        default: loadResult = 32'bx;
+      endcase
+
+endmodule // loadext
+
 module flopr #(parameter WIDTH = 8)
    (input  logic             clk, reset,
     input logic [WIDTH-1:0]  d, 
@@ -583,7 +619,7 @@ endmodule // mux4
 module imem (input  logic [31:0] a,
 	     output logic [31:0] rd);
    
-   logic [31:0] 		 RAM[1023:0];
+   logic [31:0] 		 RAM[2047:0];
    
    assign rd = RAM[a[31:2]]; // word aligned
    
@@ -593,7 +629,7 @@ module dmem (input  logic        clk, we,
 	     input  logic [31:0] a, wd,
 	     output logic [31:0] rd);
    
-   logic [31:0] 		 RAM[1023:0];
+   logic [31:0] 		 RAM[2047:0];
    
    assign rd = RAM[a[31:2]]; // word aligned
    always_ff @(posedge clk)
