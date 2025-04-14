@@ -84,7 +84,7 @@ module riscv(input  logic        clk, reset,
              output logic 	 MemWriteM,
              output logic [31:0] ALUResultM, WriteDataM,
              input logic [31:0]  ReadDataM,
-             output logic        MemStrobe);
+             output logic        MemStrobeM);
 
    logic [6:0] 			 opD;
    logic [2:0] 			 funct3D;
@@ -112,7 +112,7 @@ module riscv(input  logic        clk, reset,
 		opD, funct3D, funct7b5D, ImmSrcD,
 		FlushE, CarryE, Res31E, ZeroE, PCSrcE, ALUControlE, ALUSrcAE, ALUSrcBE, ResultSrcEb0, PCTargetSrcE,
 		MemWriteM, RegWriteM, 
-		RegWriteW, ResultSrcW, MemStrobe);
+		RegWriteW, ResultSrcW, MemStrobeM);
 
    datapath dp(clk, reset,
                StallF, PCF, InstrF,
@@ -151,7 +151,7 @@ module controller(input  logic		 clk, reset,
                   // Writeback stage control signals
                   output logic 	     RegWriteW, // for datapath and Hazard Unit
                   output logic [1:0] ResultSrcW,
-                  output logic       MemStrobe);
+                  output logic       MemStrobeM);
 
    // pipelined control signals
    logic 			     RegWriteD, RegWriteE;
@@ -164,17 +164,18 @@ module controller(input  logic		 clk, reset,
    logic 			     ALUSrcAD;   
    logic 			     ALUSrcBD;
    logic           PCTargetSrcD;
-   logic [2:0] 			     funct3E;   
+   logic [2:0] 			     funct3E;
+   logic 			     MemStrobeD, MemStrobeE;
    
    // Decode stage logic
    maindec md(opD, ResultSrcD, MemWriteD, BranchD,
-              ALUSrcAD, ALUSrcBD, PCTargetSrcD, RegWriteD, JumpD, ImmSrcD, ALUOpD, MemStrobe);
-  aludec  ad(opD[5], funct3D, funct7b5D, ALUOpD, ALUControlD, MemStrobe);
+              ALUSrcAD, ALUSrcBD, PCTargetSrcD, RegWriteD, JumpD, ImmSrcD, ALUOpD, MemStrobeD);
+	aludec  ad(opD[5], funct3D, funct7b5D, ALUOpD, ALUControlD);
    
    // Execute stage pipeline control register and logic
    floprc #(16) controlregE(clk, reset, FlushE,
-                            {RegWriteD, ResultSrcD, MemWriteD, JumpD, BranchD, ALUControlD, ALUSrcAD, ALUSrcBD, PCTargetSrcD, funct3D},
-                            {RegWriteE, ResultSrcE, MemWriteE, JumpE, BranchE, ALUControlE, ALUSrcAE, ALUSrcBE, PCTargetSrcE, funct3E});
+			    {RegWriteD, ResultSrcD, MemWriteD, JumpD, BranchD, ALUControlD, ALUSrcAD, ALUSrcBD, PCTargetSrcD, funct3D, MemStrobeD},
+			    {RegWriteE, ResultSrcE, MemWriteE, JumpE, BranchE, ALUControlE, ALUSrcAE, ALUSrcBE, PCTargetSrcE, funct3E, MemStrobeE});
 
    logic            BranchControl;
 
@@ -189,8 +190,8 @@ module controller(input  logic		 clk, reset,
    
    // Memory stage pipeline control register
    flopr #(4) controlregM(clk, reset,
-                          {RegWriteE, ResultSrcE, MemWriteE},
-                          {RegWriteM, ResultSrcM, MemWriteM});
+			  {RegWriteE, ResultSrcE, MemWriteE, MemStrobeE},
+			  {RegWriteM, ResultSrcM, MemWriteM, MemStrobeM});
    
    // Writeback stage pipeline control register
    flopr #(3) controlregW(clk, reset,
