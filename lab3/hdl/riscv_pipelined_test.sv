@@ -542,7 +542,23 @@ module loadext (input logic  [31:0] ALUResult, ReadData,
         endcase
         default: loadResult = 32'bx;
       endcase
-
+/*always_comb// I know this is incorrect in the meantime -Erica
+  case(funct3)
+    3'b000: case(storebits) // sb
+      2'b00: WriteDataOut = {{24'b0}, WriteDataIn[7:0]};
+      2'b01: WriteDataOut = {{16'b0}, WriteDataIn[7:0], 8'b0};
+      2'b10: WriteDataOut = {{8'b0}, WriteDataIn[7:0], 16'b0};
+      2'b11: WriteDataOut = {WriteDataIn[7:0], {24'b0}};
+      default: WriteDataOut = 32'bx;
+    endcase
+    3'b001: case(storebits[1]) // sh
+      1'b0: WriteDataOut = {{16'b0}, WriteDataIn[15:0]};
+      1'b1: WriteDataOut = {WriteDataIn[15:0], {16'b0}};
+      default: WriteDataOut = 32'bx;
+    endcase
+    3'b010: WriteDataOut = WriteDataIn; // sw
+    default: WriteDataOut = 32'bx;
+  endcase*/
 endmodule // loadext
 
 module flopr #(parameter WIDTH = 8)
