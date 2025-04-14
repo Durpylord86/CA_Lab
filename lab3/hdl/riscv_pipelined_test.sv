@@ -542,7 +542,11 @@ module loadext (input logic  [31:0] ALUResult, ReadData,
         endcase
         default: loadResult = 32'bx;
       endcase
-/*always_comb// I know this is incorrect in the meantime -Erica
+	// I know this is incorrect in the meantime -Erica
+	/*module shifttext (input logic  [31:0] ALUResult, WriteDataIn,
+                input logic  [2:0]  funct3,
+                output logic [31:0] WriteDataOut);
+always_comb// I know this is incorrect in the meantime -Erica
   case(funct3)
     3'b000: case(storebits) // sb
       2'b00: WriteDataOut = {{24'b0}, WriteDataIn[7:0]};
