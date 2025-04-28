@@ -5,7 +5,7 @@ rvtest_entry_point:
 
     # set up PMP so all of memory is accessible and we don't trap when entering supervisor mode
     # Define region 0 to cover all addresses as RWX
-   li t0, 0x1800
+   li t0, 0x00001800
    csrr t1, mstatus      # Read current mstatus into t1
    or t1, t1, t0         # Set MPP field to 01 (supervisor)
    csrw mstatus, t1      # Write back to mstatus
