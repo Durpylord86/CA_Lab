@@ -6,10 +6,9 @@ rvtest_entry_point:
     # set up PMP so all of memory is accessible and we don't trap when entering supervisor mode
     # Define region 0 to cover all addresses as RWX
    li t0, -1
-   csrr t1, mstatus      # Read current mstatus into t1
-   or t1, t1, t0         # Set MPP field to 01 (supervisor)
-   csrw mstatus, t1      # Write back to mstatus
-   nop
+   csrw pmpaddr0, t0       # Set PMP address to all 1s
+   li t0, 0x7F
+   csrw pmpcfg0, t0        # Set PMP config to TOR, RWX   nop
 
     # switch to supervisor mode	
     # Set mstatus.MPP to 01, set MPEC to a trampoline address where supervisor should begin, do mret
