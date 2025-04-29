@@ -8,7 +8,8 @@ rvtest_entry_point:
    li t0, -1
    csrw pmpaddr0, t0       # Set PMP address to all 1s
    li t0, 0x7F
-   csrw pmpcfg0, t0        # Set PMP config to TOR, RWX   nop
+   csrw pmpcfg0, t0        # Set PMP config to TOR, RWX   
+nop
 
     # switch to supervisor mode	
     # Set mstatus.MPP to 01, set MPEC to a trampoline address where supervisor should begin, do mret
