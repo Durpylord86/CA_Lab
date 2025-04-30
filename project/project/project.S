@@ -61,6 +61,7 @@ write_tohost:
 self_loop:
     j self_loop
 
+.align 4
 tohost:
     .word 0
 
@@ -71,5 +72,11 @@ tohost:
 # root (L1) Page table situated at 0x80010000
 pagetable:
 
+.space 2048
+.4byte 0x20004401
+.space 252
+.4byte 0x20004401
+
 .align 12
 # L0 page table situated at 0x80011000
+.4byte 0x200000CF
