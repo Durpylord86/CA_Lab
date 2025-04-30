@@ -5,29 +5,30 @@ rvtest_entry_point:
 
     # set up PMP so all of memory is accessible and we don't trap when entering supervisor mode
     # Define region 0 to cover all addresses as RWX
-        li t0, 0x0000000F 
-        csrw pmpcfg0, t0 #Set PMP config to TOR RWX
-        li t0, 0xFFFFFFFF    
-        csrw pmpaddr0, t0 # Set PMP address to all addresses
+	li t0, -1
+        csrw pmpaddr0, t0 #Set PMP0 address to all 1s
+        li t0, 0x0F
+        csrw pmpcfg0, t0 # Set PMP0 config to RWX for TOR
     nop
 
     # switch to supervisor mode	
     # Set mstatus.MPP to 01, set MEPC to a trampoline address where supervisor should begin, do mret
-        li t1, 0x00000800 #Set MPP
-        csrr t1, mstatus
-        or t1, t1, t0
-        csrw mstatus, t1
-    
-	    # fill in instructions here
-    csrw mepc, 0x80000
+        csrr t0, mstatus
+	li t1, 0x1800
+	not t2, t1
+	and t0, t0, t2
+	li t1, 0x800
+	or t0, t0, t1
+	csrw mstatus, t0
+	la t0, supervisorstart
+	csrw mepc, t0
 
     mret                    	# enter supervisor mode at supervisorstart
     nop
-#How does mret know to go to supervisor start????????
-#assuming mepc gets set to supervisor start???? but WHAT ABOUT MRETTTTT?????????????????
+
 supervisorstart:
     la t0, pagetable        	# get address of root page table
-				# fill in instructions here .....like what???????
+				# fill in instructions here
     csrw satp, t0         	# enable virtual memory
     
     # now we are execuiting on virtual page 0x80000, which is also physical page 0x80000
