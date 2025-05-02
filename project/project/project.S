@@ -31,8 +31,10 @@ supervisorstart:
     srli t1, t0, 12# fill in instructions here
     li t2, 8
     slli t2, t2, 31
-    or t1, t1, t2
-    mv t0, t1
+    /*or t1, t1, t2
+    mv t0, t1*/
+    or t1, t1, t0
+    li t0, 0x80008001
     csrw satp, t0         	# enable virtual memory
     
     # now we are execuiting on virtual page 0x80000, which is also physical page 0x80000
