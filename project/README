@@ -1,5 +1,26 @@
 Sail:
   riscv_sim_rv32d --pmp-count=16 project | tee log
+This runs the RISC-V binary file and logs the processor’s behavior to a file named log. 
+It allowed us to observe the virtual memory setup and transitions in detail.
 
 Questa(Wally0):
   wsim rv32gc --elf project --gui
+
+This launches the squarewaves of the system where we could watch memory accesses, register changes, and instruction execution in real time. 
+It made it easier to show that our memory mappings were correct..
+
+Log:
+The Sail simulation shows that the program starts running at address 0x80000000 and that the system allowed access to memory.
+It shows that memory protection settings were configured to allow full read, write, and execute permissions, which prevents any access issues when switching from machine mode to supervisor mode. 
+Once in supervisor mode, virtual memory is turned on by writing to the satp register. 
+The value written confirms that the page table was located correctly and that the Sv32 virtual memory system was enabled.
+
+Later in the simulation, the program writes the number 42 to the virtual address 0x90000300. 
+The log shows that this value ends up at the physical address 0x80000300, which proves that both virtual addresses were correctly mapped to the same physical location. 
+At the end of the run, the program writes to tohost, which tells the simulator that it has finished successfully. 
+The log ends with a SUCCESS. 
+
+Issues with Project:
+Initially we had issues with page faulting in our code. At first we had no contents in our page table.
+Once we added our page tables, the file was still faulting and our values were not in memory range.
+We then changed our satp and PMP, since they weren't set up correctly.This successfuly ran our code.
