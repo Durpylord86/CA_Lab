@@ -1,13 +1,13 @@
 Sail:
   riscv_sim_rv32d --pmp-count=16 project | tee log
-This runs the RISC-V binary file and logs the processor’s behavior to a file named log. 
+This runs the RISC-V binary file and logs it behavior, which we put into a file named log. 
 It allowed us to observe the virtual memory setup and transitions in detail.
 
 Questa(Wally0):
   wsim rv32gc --elf project --gui
 
 This launches the squarewaves of the system where we could watch memory accesses, register changes, and instruction execution in real time. 
-It made it easier to show that our memory mappings were correct..
+It made it easier to show that our memory mappings were correct.
 
 Log:
 The Sail simulation shows that the program starts running at address 0x80000000 and that the system allowed access to memory.
