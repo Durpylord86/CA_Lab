@@ -5,18 +5,16 @@ rvtest_entry_point:
 
     # set up PMP so all of memory is accessible and we don't trap when entering supervisor mode
     # Define region 0 to cover all addresses as RWX
-	li t0, -1
-        csrw pmpaddr0, t0 #Set PMP0 address to all 1s
-        li t0, 0x0F
-        csrw pmpcfg0, t0 # Set PMP0 config to RWX for TOR
-    nop
+	nop
+    li t0, 0xffffffff
+    csrw pmpaddr0, t0 #Set PMP0 address to all 1s
+    li t0, 0xf
+    csrw pmpcfg0, t0 # Set PMP0 config to RWX for TOR
+    
 
     # switch to supervisor mode	
     # Set mstatus.MPP to 01, set MEPC to a trampoline address where supervisor should begin, do mret
-        csrr t0, mstatus
-	li t1, 0x1800
-	not t2, t1
-	and t0, t0, t2
+    csrr t0, mstatus
 	li t1, 0x800
 	or t0, t0, t1
 	csrw mstatus, t0
@@ -28,13 +26,9 @@ rvtest_entry_point:
 
 supervisorstart:
     la t0, pagetable        	# get address of root page table
-    srli t1, t0, 12# fill in instructions here
-    li t2, 8
-    slli t2, t2, 31
-    /*or t1, t1, t2
-    mv t0, t1*/
-    or t1, t1, t0
-    li t0, 0x80008001
+    srli t0, t0, 12# fill in instructions here
+    li t1, 0x80000000
+    or t0, t0, t1
     csrw satp, t0         	# enable virtual memory
     
     # now we are execuiting on virtual page 0x80000, which is also physical page 0x80000
